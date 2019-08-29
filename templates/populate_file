@@ -1,0 +1,169 @@
+#!/bin/bash
+
+path="${tmp_path}/bin"
+if [[ ! -d $path ]]; then
+  sudo mkdir -p $path
+fi
+
+jq_path="${tmp_path}/bin/jq"
+
+if [[ ! -f $jq_path ]]; then
+  if hash curl; then
+    sudo curl -L -o $jq_path ${jq_linux_url} && sudo chmod 755 $jq_path
+  else
+    sudo wget -O $jq_path ${jq_linux_url} && sudo chmod 755 $jq_path
+  fi
+fi
+
+export PATH=$PATH:${tmp_path}/bin:$(find /opt -name "*gitbin*")
+
+x='${data}'
+
+
+workstation_user_name=$(echo $x | jq -r '.node_name[0]')
+workstation_user_pem=$(echo $x | jq -r '.client_pem[0]')
+workstation_org_pem=$(echo $x | jq -r '.validation_pem[0]')
+workstation_org_url=$(echo $x | jq -r '.org_url[0]')
+workstation_org_name=$(echo $${workstation_org_url} | awk -F '/' '{print $5}')
+
+mkdir -p ${chef_repo_path}/.chef
+mkdir -p ${chef_repo_path}/cookbooks
+mkdir -p ${chef_repo_path}/policies
+mkdir -p ${chef_repo_path}/environments
+mkdir -p ${chef_repo_path}/roles
+
+if [[ -f $${HOME}/.bashrc ]]; then
+  if ! grep "alias cw=" $${HOME}/.bashrc; then
+    echo "alias cw='cd ${chef_repo_path}'" >> $${HOME}/.bashrc
+  fi
+fi
+
+pushd ${chef_repo_path}
+
+cat << EOF > .chef/$${workstation_user_name}.pem
+$${workstation_user_pem}
+EOF
+cat << EOF > .chef/$${workstation_org_name}-validation.pem
+$${workstation_org_pem}
+EOF
+
+cat << EOF > .chef/knife.rb
+current_dir = File.dirname(__FILE__)
+log_level       :info
+log_location    STDOUT
+node_name       '$${workstation_user_name}'
+client_key      "#{current_dir}/$${workstation_user_name}.pem"
+validation_client_name "$${workstation_org_name}-validator"
+validation_key  "#{current_dir}/$${workstation_org_name}-validation.pem"
+chef_server_url "$${workstation_org_url}"
+cookbook_path   ["#{current_dir}/../cookbooks"]
+ssl_verify_mode ${chef_server_ssl_verify_mode}
+EOF
+
+%{ if chef_server_ssl_verify_mode == ":verify_none" }
+knife ssl fetch
+%{ endif }
+%{ for k in berksfiles }
+cat << EOF > ${k.name} 
+source ${k.default_source}
+
+%{ for cookbook in keys(k.cookbooks) ~}
+cookbook '${ cookbook }'${k.cookbooks[cookbook] != "" ? ", ${k.cookbooks[cookbook]}" : ""}
+%{ endfor ~}
+EOF
+%{ endfor}
+
+%{ for k in policyfiles }
+cat << EOF > policies/${k.name}.rb
+name '${k.name}'
+
+default_source ${k.default_source}
+
+run_list ${jsonencode(k.run_list)}
+
+%{ for cookbook in keys(k.cookbooks) }
+cookbook '${ cookbook }'${k.cookbooks[cookbook] != "" ? ", ${k.cookbooks[cookbook]}" : ""}
+%{ endfor }
+%{if contains(keys(k), "default_attributes") }
+$(ruby ${tmp_path}/attribute_parser.rb '{"default_attributes": ${jsonencode(k.default_attributes)}}')
+%{ endif }
+%{if contains(keys(k), "override_attributes") }
+$(ruby ${tmp_path}/attribute_parser.rb '{"override_attributes": ${jsonencode(k.override_attributes)}}')
+%{ endif }
+EOF
+%{ endfor }
+
+%{ for k in berksfiles }
+berks install -b ${k.name}
+if [[ -f ${k.name}.lock ]]; then
+  berks update -b ${k.name}
+fi
+%{ if chef_server_ssl_verify_mode == ":verify_none" }
+berks upload -b ${k.name} --no-ssl-verify
+%{ else }
+berks upload -b ${k.name}
+%{ endif }
+%{ endfor }
+
+%{ for k in policyfiles }
+chef install policies/${k.name}.rb --chef-license accept
+if [[ -f policies/${k.name}.lock.json ]]; then
+  chef update policies/${k.name}.rb --chef-license accept
+fi
+%{ for g in k.groups }
+chef push ${g} policies/${k.name}.rb --chef-license accept
+%{ endfor }
+%{ endfor }
+
+
+%{ for k in environments }
+cat << EOF > environments/${k.name}.json
+{
+  "name": "${k.name}",
+  "description": "${k.description != "" ? k.description : "Created by Terraform" }",
+  %{ if length(keys(k.cookbook_versions)) > 0 }
+  "cookbook_versions": ${jsonencode(k.cookbook_versions)},
+  %{ endif }
+  %{ if length(keys(k.default_attributes)) > 0 }
+  "default_attributes": ${jsonencode(k.default_attributes)},
+  %{ endif }
+  %{ if length(keys(k.override_attributes)) > 0 }
+  "override_attributes": ${jsonencode(k.override_attributes)},
+  %{ endif }
+  "json_class": "Chef::Environment",
+  "chef_type": "environment"
+}
+EOF
+%{ endfor }
+
+%{ for k in roles }
+cat << EOF > roles/${k.name}.json
+{
+  "name": "${k.name}",
+  "description": "${k.description != "" ? k.description : "Created by Terraform" }",
+  %{ if length(keys(k.default_attributes)) > 0 }
+  "default_attributes": ${jsonencode(k.default_attributes)},
+  %{ endif }
+  %{ if length(keys(k.override_attributes)) > 0 }
+  "override_attributes": ${jsonencode(k.override_attributes)},
+  %{ endif }
+  %{ if length(k.run_list) > 0 }
+  "run_list": ${jsonencode(k.run_list)},
+  %{ endif }
+  %{ if length(keys(k.env_run_list)) > 0 }
+  "env_run_lists": ${jsonencode(k.env_run_list)},
+  %{ endif }
+  "json_class": "Chef::Role",
+  "chef_type": "role"
+}
+EOF
+%{ endfor}
+
+%{ for k in environments }
+knife environment from file environments/${k.name}.json
+%{ endfor }
+
+%{ for k in roles }
+knife role from file roles/${k.name}.json
+%{ endfor }
+popd

@@ -1,0 +1,38 @@
+#!/bin/bash
+path="${tmp_path}/bin"
+if [[ ! -d $path ]]; then
+  sudo mkdir -p $path
+fi
+
+jq_path="${tmp_path}/bin/jq"
+
+if [[ ! -f $jq_path ]]; then
+  if hash curl; then
+    sudo curl -L -o $jq_path ${jq_linux_url} && sudo chmod 755 $jq_path
+  else
+    sudo wget -O $jq_path ${jq_linux_url} && sudo chmod 755 $jq_path
+  fi
+fi
+
+export PATH=$PATH:${tmp_path}/bin:$(find /opt -name "*gitbin*")
+
+x='${data}'
+
+workstation_user_name=$(echo $x | jq -r '.node_name[0]')
+workstation_user_pem=$(echo $x |  jq '.client_pem[0]')
+workstation_org_pem=$(echo $x | jq '.validation_pem[0]')
+workstation_org_url=$(echo $x | jq -r '.org_url[0]')
+workstation_org_name=$(echo $${workstation_org_url} | awk -F '/' '{print $5}')
+
+VAR1=$(cat <<EOF
+{
+  "workstation_user_name":"$workstation_user_name",
+  "workstation_user_pem":$workstation_user_pem,
+  "workstation_org_pem":$workstation_org_pem,
+  "workstation_org_url":"$workstation_org_url",
+  "workstation_org_name":"$workstation_org_name"
+}
+EOF
+)
+
+echo "$${VAR1}" | jq '.'
