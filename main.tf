@@ -1,7 +1,7 @@
 locals {
   # below is a workarround for this bug: https://github.com/hashicorp/terraform/issues/21917 
   # once it is fixed this can be tidied up
-  code = var.chef_module != "" ? var.chef_module : jsonencode({"workstation_user_name" = [var.workstation_user_name], "workstation_user_pem" = [var.workstation_user_pem], "workstation_org_pem" = [var.workstation_org_pem], "workstation_org_url" = [var.workstation_org_url]})
+  code = var.chef_module != "" ? var.chef_module : jsonencode({"node_name" = [var.workstation_user_name], "client_pem" = [var.workstation_user_pem], "validation_pem" = [var.workstation_org_pem], "org_url" = [var.workstation_org_url]})
 
   attribute_parser = templatefile("${path.module}/templates/attribute_parser.rb", {})
 
@@ -35,10 +35,10 @@ locals {
     jq_url                      = local.jq_url,
     system                      = var.system_type,
     populate                    = var.populate
-    workstation_user_name       = jsondecode(local.code)["workstation_user_name"][0]
-    workstation_user_pem        = jsondecode(local.code)["workstation_user_pem"][0]
-    workstation_org_pem         = jsondecode(local.code)["workstation_org_pem"][0]
-    workstation_org_url         = jsondecode(local.code)["workstation_org_url"][0]
+    workstation_user_name       = jsondecode(local.code)["node_name"][0]
+    workstation_user_pem        = jsondecode(local.code)["client_pem"][0]
+    workstation_org_pem         = jsondecode(local.code)["validation_pem"][0]
+    workstation_org_url         = jsondecode(local.code)["org_url"][0]
     module_input                = var.module_input
   })
 }
