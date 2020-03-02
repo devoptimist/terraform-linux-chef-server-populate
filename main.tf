@@ -35,10 +35,10 @@ locals {
     jq_url                      = local.jq_url,
     system                      = var.system_type,
     populate                    = var.populate
-    workstation_user_name       = jsondecode(local.code)["node_name"][0]
-    workstation_user_pem        = jsondecode(local.code)["client_pem"][0]
-    workstation_org_pem         = jsondecode(local.code)["validation_pem"][0]
-    workstation_org_url         = jsondecode(local.code)["org_url"][0]
+    workstation_user_name       = length(jsondecode(local.code)["node_name"]) > 0 ? jsondecode(local.code)["node_name"][0] : ""
+    workstation_user_pem        = length(jsondecode(local.code)["client_pem"]) > 0 ? jsondecode(local.code)["client_pem"][0] : ""
+    workstation_org_pem         = length(jsondecode(local.code)["validation_pem"]) > 0 ? jsondecode(local.code)["validation_pem"][0] : ""
+    workstation_org_url         = length(jsondecode(local.code)["org_url"]) > 0 ? jsondecode(local.code)["org_url"][0] : ""
     module_input                = var.module_input
   })
 }
