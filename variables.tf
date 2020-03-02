@@ -150,3 +150,11 @@ variable "chef_module" {
   type       = string
   default    = ""
 }
+
+############ module input ############
+
+variable "module_input" {
+  description = "A string input to the module, used to enforce module ordering. make this input the putput from a dependant module"
+  type        = string
+  default     = "no_dependency"
+}

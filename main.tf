@@ -35,10 +35,10 @@ locals {
     jq_url                      = local.jq_url,
     system                      = var.system_type,
     populate                    = var.populate
-    workstation_user_name       = jsonencode(local.code)["workstation_user_name"][0]
-    workstation_user_pem        = jsonencode(local.code)["workstation_user_pem"][0]
-    workstation_org_pem         = jsonencode(local.code)["workstation_org_pem"][0]
-    workstation_org_url         = jsonencode(local.code)["workstation_org_url"][0]
+    workstation_user_name       = jsondecode(local.code)["workstation_user_name"][0]
+    workstation_user_pem        = jsondecode(local.code)["workstation_user_pem"][0]
+    workstation_org_pem         = jsondecode(local.code)["workstation_org_pem"][0]
+    workstation_org_url         = jsondecode(local.code)["workstation_org_url"][0]
     module_input                = var.module_input
   })
 }
@@ -102,7 +102,6 @@ data "external" "workstation_details" {
 
 resource "random_string" "module_hook" {
   depends_on       = [null_resource.populate_chef_server]
-  count            = var.instance_count
   length           = 16
   special          = true
   override_special = "/@\" "

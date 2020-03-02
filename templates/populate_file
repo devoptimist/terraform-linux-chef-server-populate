@@ -192,7 +192,6 @@ popd
 #$env:path += ';c:\opscode\chefdk\bin'
 #$env:path += ';c:\opscode\chefdk\embedded\bin'
 #
-#$x='${data}'
 #
 #$workstation_user_name = (Write-Output $x | jq -r '.node_name[0]')
 #$workstation_org_url = (Write-Output $x | jq -r '.org_url[0]')
