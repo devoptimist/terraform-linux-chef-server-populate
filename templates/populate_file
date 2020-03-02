@@ -20,13 +20,13 @@ if [[ ! -f $jq_path ]]; then
   fi
 fi
 
-export PATH=$PATH:${tmp_path}/bin:$(find /opt -name "*gitbin*")
+export PATH=$PATH:${tmp_path}/bin:$(sudo find /opt -name "*gitbin*")
 
-workstation_user_name=${workstation_user_name}
-workstation_user_pem=${workstation_user_pem}
-workstation_org_pem=${workstation_org_pem}
-workstation_org_url=${workstation_org_url}
-workstation_org_name=$(echo $${workstation_org_url} | awk -F '/' '{print $5}')
+workstation_user_name="${workstation_user_name}"
+workstation_user_pem="${workstation_user_pem}"
+workstation_org_pem="${workstation_org_pem}"
+workstation_org_url="${workstation_org_url}"
+workstation_org_name="$(echo $${workstation_org_url} | awk -F '/' '{print $5}')"
 
 mkdir -p ${chef_repo_path}/.chef
 mkdir -p ${chef_repo_path}/cookbooks
