@@ -85,8 +85,8 @@ default_source ${k.default_source}
 
 run_list ${jsonencode(k.run_list)}
 
-%{ for policy in keys(k.policyfiles) }
-include_policy "${policy}", ${k.policyfiles[policy]}
+%{ for policy in keys(k.include_policy) }
+include_policy "${policy}", ${k.include_policy[policy]}
 %{ endfor }
 
 %{ for cookbook in keys(k.cookbooks) }
