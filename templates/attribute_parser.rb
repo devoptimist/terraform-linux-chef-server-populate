@@ -24,5 +24,9 @@ mode = if data.key?('override_attributes')
        end
 
 loop_hash(data[mode]) do |k, v|
-  puts "#{mode.include?('override') ? 'override' : 'default'}#{k.map { |x| "['#{x}']" }.join()} = #{v.is_a?(String) ? "'#{v}'" : v}"
+  if /cygwin|mswin|mingw|bccwin|wince|emx/ =~ RbConfig::CONFIG["host_os"]
+    puts "#{mode.include?('override') ? 'override' : 'default'}#{k.map { |x| "['#{x}']" }.join()} = #{v.is_a?(String) ? "'#{v}'" : v}~~~"
+  else
+    puts "#{mode.include?('override') ? 'override' : 'default'}#{k.map { |x| "['#{x}']" }.join()} = #{v.is_a?(String) ? "'#{v}'" : v}"
+  end
 end

@@ -93,10 +93,10 @@ include_policy "${policy}", ${k.include_policy[policy]}
 cookbook '${ cookbook }'${k.cookbooks[cookbook] != "" ? ", ${k.cookbooks[cookbook]}" : ""}
 %{ endfor }
 %{if contains(keys(k), "default_attributes") }
-$(ruby ${tmp_path}/attribute_parser.rb '{"default_attributes": ${jsonencode(k.default_attributes)}}')
+$($(ls /opt/*/embedded/bin/ruby|tail -1) ${tmp_path}/attribute_parser.rb '{"default_attributes": ${jsonencode(k.default_attributes)}}')
 %{ endif }
 %{if contains(keys(k), "override_attributes") }
-$(ruby ${tmp_path}/attribute_parser.rb '{"override_attributes": ${jsonencode(k.override_attributes)}}')
+$($(ls /opt/*/embedded/bin/ruby|tail -1) ${tmp_path}/attribute_parser.rb '{"override_attributes": ${jsonencode(k.override_attributes)}}')
 %{ endif }
 EOF
 %{ endfor }
